@@ -1,0 +1,210 @@
+//ANTLR Assignment 2	
+//Name 	: Sumeet Sunil Gadkari
+//ID	: 016115942
+
+//**********************ANTLR Grammar Expr.g File*********************************
+
+
+grammar Expr;
+
+@header {
+import java.util.HashMap;
+import java.util.Scanner;
+}
+
+@members {
+/** Map variable name to Integer object holding value */
+HashMap memory = new HashMap();
+}
+
+prog:   stat+ ;
+                
+stat:  'PRINT' expr NEWLINE 		{System.out.print($expr.value);}
+    |'PRINTLN' expr NEWLINE		{System.out.print($expr.value+"\n");}
+    |'INTEGER' ID(param)* NEWLINE	{ Integer v =(Integer)memory.get($ID.text);
+    					if (v==null)
+    					{
+    						memory.put($ID.text,new Integer(0));
+    					}   	
+    					else {
+    						System.err.println("\n Previously defined variable "+ $ID.text+"\n");
+    						System.exit(0);	
+						}
+    					}
+    |(LET)? ID '=' expr NEWLINE 	{
+    					Integer v = (Integer)memory.get($ID.text);
+              				if (v==null){ System.out.println("\n undefined variable "+$ID.text+"\n");
+              						System.exit(0);	}
+    					else 
+    						{
+    						if($expr.value > 2147483647||$expr.value < -2147483647){
+              	   					System.out.println("\nValue should be specified between java int range -2147483647 to 2147483647 for variable "+$ID.text);
+              	   					System.exit(0);}
+    						memory.put($ID.text, new Integer($expr.value));
+    						}
+    					}
+    |	'INPUT' ID (input)* {
+				try
+				{    
+    					Scanner s = new Scanner(System.in);
+     					System.out.print(" \n Enter value for "+$ID.text+" : ");
+      					int a = s.nextInt();
+      					Integer v = (Integer)memory.get($ID.text);
+              				if (v==null){ System.out.println(" \n undefined variable "+$ID.text+"\n");
+              					      System.exit(0);	}
+    					else	{memory.put($ID.text, new Integer(a));
+    						}
+    				}
+    				catch(Exception e)
+				{
+					System.out.println("\n INVALID INTEGER RANGE.");
+					System.exit(0);	
+				}
+      }
+    |	print	NEWLINE
+    |	println	NEWLINE
+    |   NEWLINE
+    |	COMMENT
+    |	'END'	{System.exit(0);}
+     ;
+     
+input	:	',' ID  {	try
+				{
+					Scanner q = new Scanner(System.in);
+     					System.out.print(" \n Enter value for "+$ID.text+" : ");
+      					int b = q.nextInt();
+      					Integer v = (Integer)memory.get($ID.text);
+              				if (v==null){ System.out.println(" \n undefined variable "+$ID.text+"\n");
+              					    System.exit(0);	}
+    					else	{memory.put($ID.text, new Integer(b));
+    						}
+    				}
+    				catch(Exception e)
+				{
+					System.out.println("\n INVALID INTEGER RANGE.");
+					System.exit(0);	
+				}
+      };
+param	:	',' ID			{ Integer v =(Integer)memory.get($ID.text);
+    					if (v==null)
+    					{
+    						memory.put($ID.text,new Integer(0));
+    					}   	
+    					else {System.err.println("\n Previously defined variable "+ $ID.text+"\n");
+    				      		System.exit(0);	}
+    					};
+    
+print	:	'PRINT' STRING_LITERAL  {System.out.print(($STRING_LITERAL.text).substring(1,($STRING_LITERAL.text).length()-1));}
+		|'PRINT' ID  		{Integer v = (Integer)memory.get($ID.text);
+					if (v==null){ System.out.println("\n undefined variable "+$ID.text);
+              					      System.exit(0);	}
+					else
+				 		System.out.print(v.intValue());
+				 	}
+		;
+println	:	'PRINTLN' STRING_LITERAL  {System.out.print(($STRING_LITERAL.text).substring(1,($STRING_LITERAL.text).length()-1)+"\n");}
+		|'PRINTLN' ID		{Integer v = (Integer)memory.get($ID.text);
+					if (v==null){ System.out.println("\n undefined variable "+$ID.text);
+              					      System.exit(0);	}
+					else
+				 			System.out.print("\n"+v.intValue());};
+
+expr returns [int value]
+    :   e=multExpr {$value = $e.value;}
+        (   '+' e=multExpr {$value += $e.value;   }
+        |   '-' e=multExpr {$value -= $e.value;}
+        )*
+    ;
+
+
+
+multExpr returns [int value]
+    :   e=atom {$value = $e.value;} ('*' e=atom {$value *= $e.value;})*;
+    
+
+atom returns [int value]
+    :   INT 				{    	try
+    						{
+    							$value = Integer.parseInt($INT.text);
+    						}
+    						catch(Exception e)
+						{
+							System.out.println(" \n INVALID INTEGER RANGE.");
+							System.exit(0);	
+						}
+					}
+    |   ID 				 {
+             				 Integer v = (Integer)memory.get($ID.text);
+              				 if (v==null){ System.out.println("\n undefined variable "+$ID.text+"\n");
+             	 				       System.exit(0);	}
+             				 else{	
+              				 	$value = v.intValue();
+              				 	if($value > 2147483647||$value < -2147483647){
+              	   					System.out.println("\nValue should be specified between java int range -2147483647 to 2147483647 for variable "+$ID.text);
+              	   					System.exit(0);}
+        					}
+       					 }
+    |   '(' expr ')'			 {$value = $expr.value;}
+    ;
+    
+LET	:	'LET';
+ID  	:   	('a'..'z'|'A'..'Z')('a'..'z'|'A'..'Z'|'_'|'0'..'9')*  ;
+INT 	:   	('-')?'0'..'9'+ ;
+NEWLINE	:	'\r'? '\n' ;
+WS  	:   	(' '|'\t')+ {skip();} ;
+COMMENT : 	'//' (~('\n'|'\r'))* {skip(); } ;
+STRING_LITERAL
+	:	('"')(~('\\'|'"'|'\n'|'\r') )* ('"');
+
+
+
+//********************* Java File ************************************
+
+
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.File;
+import org.antlr.runtime.ANTLRFileStream;
+import org.antlr.runtime.ANTLRInputStream;
+import org.antlr.runtime.ANTLRStringStream;
+import org.antlr.runtime.CommonTokenStream;
+import org.antlr.runtime.RecognitionException;
+
+	/**
+	 *
+	 * @author Daddy
+	 */
+	public class DSLInterpreter {
+
+	    /**
+	     * @param args the command line arguments
+	     */
+	    public static void main(String[] args) throws IOException, RecognitionException {
+	    	
+	    	String file_name="E:/csulb/Assignments/APL/Assn2/input.s";
+	    	
+	    	String ext =file_name.substring(file_name.lastIndexOf(".") + 1);
+	    	Boolean b=ext.equals("s");
+	    	if(!b)
+	    	{
+	    		System.out.println("Invalid file extension");
+	    		System.exit(0);
+	    	}
+	    	
+
+	    	ExprLexer lexer = new ExprLexer(new ANTLRFileStream(file_name));
+	        
+	    	CommonTokenStream tokens = new CommonTokenStream(lexer);
+	            
+	    	ExprParser parser = new ExprParser(tokens);
+	            
+	        parser.prog();
+	    }
+	    
+	}
+
+
+
+//***********************************************END********************************************

@@ -1,0 +1,88 @@
+//Name 		: 	Sumeet Sunil Gadkari
+//Student ID	:	016115942
+//								APL Assignment.1 
+
+
+//*********************************************************************************************************************************************
+//Code:
+
+import java.util.regex.*;
+import java.io.*;
+import java.lang.Object;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+public class Lex
+{
+	public static void main(String[] args) throws IOException
+	{
+		// Pattern		
+		String pattern_check = "\\w{1,32}|\"(\\.|[^\"])+\"|[^\\s\\w\"]";
+		
+		//create pattern object
+		Pattern p = Pattern.compile(pattern_check);
+		
+		
+		String Input_line;
+		try (
+		    InputStream fis = new FileInputStream("E:/csulb/Assignments/APL/input.txt");	//Reading from text file
+		    InputStreamReader isr = new InputStreamReader(fis);
+		    BufferedReader br = new BufferedReader(isr);
+		) {
+		    while ((Input_line = br.readLine()) != null) 
+		    {
+		    	Matcher match_pattern = p.matcher(Input_line);
+				List<String> match_tokens = new ArrayList<String>();
+				
+				while(match_pattern.find())
+				{
+				    match_tokens.add(match_pattern.group(0));
+				}
+				 
+				for( String print_tokens:match_tokens)
+					System.out.println(print_tokens);
+		    }
+		 }      				
+	}
+}
+
+
+
+//**********************************************************************************************************************************************
+
+Input File	:
+
+Print"Hello"
+circum=(radius+radius)*22/7
+Println "pay for", hours,"at $",rate,"per hour is $",pay
+
+**********************************************************************************************************************************************
+
+Output 	:
+
+Print
+"Hello"
+circum
+=
+(
+radius
++
+radius
+)
+*
+22
+/
+7
+Println
+"pay for"
+,
+hours
+,
+"at $"
+,
+rate
+,
+"per hour is $"
+,
+pay

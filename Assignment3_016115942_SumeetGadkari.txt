@@ -1,0 +1,602 @@
+import java.io.BufferedReader;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+import java.util.regex.*;
+import java.io.*;
+import java.lang.Object;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Stack;
+
+
+class descriptor{
+	public static descriptor[] symboltable=new descriptor[50];
+	static int count=0;
+	String name;
+	int value;
+	Boolean isInitialized=false;
+	String type;
+	
+	public descriptor()
+	{}
+	
+	public descriptor(String name,String type)
+	{	
+		this.name=name;
+		this.type=type;
+		isInitialized=true;
+		count++;
+	}
+		
+	public Boolean isPresent(String current_token)
+	{	
+		int i;
+		Boolean b=false;
+		for(i=0;i<count;i++)
+		{	
+			String name=symboltable[i].name;
+	 		b=name.equals(current_token);
+	 		if(b)
+	 			break;
+	 		
+		}
+		return b;
+	}
+	
+	
+	public int getValue(String current_token)
+	{
+		int i;
+		int value=0;
+		Boolean b=false;
+		for(i=0;i<count;i++)
+		{	
+			String name=symboltable[i].name;
+	 		b=name.equals(current_token);
+	 		if(b)
+	 		{	
+	 			value=symboltable[i].value;
+	 			break;
+	 		}
+	 		
+		}
+		return value;
+	}
+	
+	public void setValue(String current_token,int val)
+	{
+		int i;
+		Boolean b=false;
+		for(i=0;i<count;i++)
+		{	
+			String name=symboltable[i].name;
+	 		b=name.equals(current_token);
+	 		if(b)
+	 		{	
+	 			symboltable[i].value=val;
+	 			break;
+	 		}
+	 		
+		}
+	}
+	
+}
+
+
+class lex
+{	
+	public List<String> makeTokens(String Input_line)
+	{			
+		List<String> match_tokens = new ArrayList<String>();
+		// Pattern	
+		String pattern_token = "\\w{1,32}|\"(\\.|[^\"])+\"|[^\\s\\w\"]";
+		//create pattern object
+		Pattern pattern_token_compile = Pattern.compile(pattern_token);
+		//"E:/csulb/Assignments/APL/input.txt"
+		    
+		    	Matcher match_pattern = pattern_token_compile.matcher(Input_line);		
+				while(match_pattern.find())
+				{
+					match_tokens.add(match_pattern.group(0));
+				}	
+			return match_tokens;
+	}
+}
+
+class letType{
+	public void letProcess(List<String> match_tokens)
+	{	
+		descriptor desc_object=new descriptor();
+		Boolean b=false;
+		String pattern_identifier = "[aA-zZ][aA-zZ|0-9|_]*" ;
+		Pattern pattern_identifier_compile = Pattern.compile(pattern_identifier);
+		Matcher match_pattern = pattern_identifier_compile.matcher(match_tokens.get(0));
+		Boolean m=match_pattern.matches();
+		String check=match_tokens.get(0);
+		
+		if(!m)
+		{
+			System.out.println("\nVariable not present in Let expression");
+			System.exit(0);
+		}
+		
+		b=desc_object.isPresent(check);
+		if(b)
+			match_tokens.remove(0);
+		if(!b)
+		{
+			System.out.println("\nVariable "+check+" not defined");
+			System.exit(0);
+		}
+		
+		if(!(match_tokens.get(0).equals("=")))
+		{
+			System.out.println("\nLet should contain = after variable ");
+			System.exit(0);
+		}
+		else
+		{
+			match_tokens.remove(0);
+		}
+		
+		b=desc_object.isPresent(check);		
+		
+		
+		if((match_tokens.size())>1)
+		{
+			expEvaluation expResult=new expEvaluation();
+			int result=expResult.expProcess(match_tokens);
+			desc_object.setValue(check,result);
+		}
+		else
+		{
+			desc_object.setValue(check,Integer.parseInt(match_tokens.get(0)));
+		}
+		
+		
+	}
+}
+
+class intType{
+	public void intProcess(List<String> match_tokens)
+	{	
+		descriptor desc_object=new descriptor();
+		int count=0;
+		int comma_count=0;
+		int var_count=0;
+		String pattern_identifier = "[aA-zZ][aA-zZ|0-9|_]*" ;
+		Pattern pattern_identifier_compile = Pattern.compile(pattern_identifier);
+				
+		for(String print:match_tokens)
+		{	
+			Matcher match_pattern = pattern_identifier_compile.matcher(print);
+			Boolean m=match_pattern.matches();
+			
+			if((count%2)==0)
+			{	
+				if(m)
+				{
+					if(desc_object.isPresent(print))
+					{
+						System.out.println("Variable "+print+" already defined");
+						System.exit(0);
+					}
+					
+					desc_object.symboltable[descriptor.count]= new descriptor(print,"int");	
+					var_count++;
+				}
+				else
+				{
+					System.out.println("\nSyntax error in variable declaration "+print);
+					System.exit(0);
+				}
+			}
+			else 
+			{	
+				if(!(print.equals(",")))
+				{
+					System.out.println("\nSyntax error in Integer declaration");
+					System.exit(0);
+				}
+				comma_count++;
+			}
+			count++;
+		}
+		if((var_count-comma_count)==0)
+		{
+			System.out.println("\nInvalid Integer Declaration");
+			System.exit(0);
+		}
+	}
+	
+}
+
+class expEvaluation{
+	public int expProcess(List<String> match_tokens)
+	{	descriptor desc_object=new descriptor();
+		Boolean skip=false;
+		int count=0; 
+		Boolean b=false;
+		int val=0;
+		String pattern_identifier = "[aA-zZ][aA-zZ|0-9|_]*" ;
+		Pattern pattern_identifier_compile = Pattern.compile(pattern_identifier);
+		String pattern_constant = "[0-9]+" ;
+		Pattern pattern_constant_compile = Pattern.compile(pattern_constant);
+		//String pattern_operator = "[+|/|*|-|/]" ;
+		String pattern_operator = "[+|\\-|/|*|/|(|)]" ;
+		Pattern pattern_operator_compile = Pattern.compile(pattern_operator);
+		
+		Stack<Integer> values=new Stack<Integer>();
+		Stack<String> ops = new Stack<String>();
+		
+		for (String current_token:match_tokens)
+		{	
+			String check=current_token;
+			Matcher match_pattern_identifier = pattern_identifier_compile.matcher(current_token);
+			Boolean m1=match_pattern_identifier.matches();
+			Matcher match_pattern_constant = pattern_constant_compile.matcher(current_token);
+			Boolean m2=match_pattern_constant.matches();
+			Matcher match_pattern_operator = pattern_operator_compile.matcher(current_token);
+			Boolean m3=match_pattern_operator.matches();
+			
+			if(m1)
+			{
+				b=desc_object.isPresent(current_token);
+				if(b)
+				{
+					val=desc_object.getValue(current_token);
+				}
+				
+				if(!b)
+				{
+					System.out.println("\nVariable  '"+current_token+"' not defined");
+					System.exit(0);
+				}
+				values.push(val);
+			}
+			else if(m2){
+				values.push(Integer.parseInt(current_token));
+			}
+			else if(m3){
+				if(current_token.equals(")"))
+				{
+					
+					while (!(ops.peek().equals("(")))
+		                  values.push(applyOp(ops.pop(), values.pop(), values.pop()));
+		                ops.pop();
+		                continue;
+				}
+				
+				while((!ops.empty())&&(current_token.equals("+")||current_token.equals("-"))&&(ops.peek().equals("*")||ops.peek().equals("/")))
+				{
+					values.push(applyOp(ops.pop(), values.pop(), values.pop()));
+				}
+				ops.push(current_token);
+			}
+			else{
+				System.out.println("\nExpression not defined properly");
+				System.exit(0);
+			}
+		}
+		while (!ops.empty())
+            values.push(applyOp(ops.pop(), values.pop(), values.pop()));
+		return values.pop();
+	}
+	
+	public int applyOp(String op, int b, int a)
+    {
+        switch (op)
+        {
+        case "+":
+            return a + b;
+        case "-":
+            return a - b;
+        case "*":
+            return a * b;
+        case "/":
+            if (b == 0)
+                throw new
+                UnsupportedOperationException("\nCannot divide by zero");
+            return a / b;
+        }
+        return 0;
+        }
+}
+
+class inputType{
+	public void inputProcess(List<String> match_tokens)
+	{	
+		descriptor desc_object=new descriptor();
+		String check;
+		Boolean b;
+		String pattern_identifier = "[aA-zZ][aA-zZ|0-9|_]*" ;
+		Pattern pattern_identifier_compile = Pattern.compile(pattern_identifier);
+		Scanner s = new Scanner(System.in);
+		
+		for (String current_token:match_tokens)
+		{	
+			
+			b=false;
+			Matcher match_pattern_identifier = pattern_identifier_compile.matcher(current_token);
+			Boolean m=match_pattern_identifier.matches();
+		
+			if (m)
+			{
+				b=desc_object.isPresent(current_token);
+			 	if(b)
+			 	{
+			 		desc_object.setValue(current_token,s.nextInt());
+			 	}
+				
+			 	if(!b)
+				{
+					System.out.println("\nvariable "+ current_token+" not defined in INTEGER directive");
+					System.exit(0);
+				}
+			}
+			else
+			{	
+				if(!(current_token.equals(",")))
+				{
+					System.out.println("\nSyntax error in INPUT statement");
+					System.exit(0);
+				}
+			
+			}
+		}
+	}
+}
+
+public class symbolTable  {
+	public static void main(String args[]) throws IOException
+	{	
+		int result=0;
+		String fileName="E:/csulb/Assignments/APL/input.txt";
+		List<String> match_tokens = new ArrayList<String>();
+		String first_directive;
+		String Input_line;
+		lex tokenizer=new lex();
+			InputStream fis = new FileInputStream(fileName);	//Reading from text file
+			InputStreamReader isr = new InputStreamReader(fis);
+			BufferedReader br = new BufferedReader(isr);
+			Input_line = br.readLine();
+		 while (Input_line!= null)
+		 {
+			 match_tokens=tokenizer.makeTokens(Input_line); 
+			 first_directive=match_tokens.get(0);			
+			 
+			 switch(first_directive)
+			 {
+			 	case("INTEGER"):
+			 					match_tokens.remove(0);
+								intType intDirective=new intType();
+								intDirective.intProcess(match_tokens);
+								break;
+				case("LET"):
+							
+							match_tokens.remove(0);
+							letType letDirective=new letType();
+							letDirective.letProcess(match_tokens);
+							break;
+				case("PRINT"):
+							match_tokens.remove(0);
+							int i=0;
+							int j=0;
+							char firstChar;
+							Boolean isValid=true;
+							firstChar=match_tokens.get(0).charAt(0);
+							if(firstChar==',')
+							{
+								System.out.println("\nSyntax error : , can't be first character");
+								System.exit(0);
+							}
+							while(i<match_tokens.size())
+							{
+								firstChar=match_tokens.get(i).charAt(0);
+														
+								if(firstChar=='"')
+								{
+																		
+									if(isValid)
+									{
+									String str=(match_tokens.get(i)).substring(1,(match_tokens.get(i)).length()-1);
+									System.out.print(str);
+									isValid=false;
+									}
+									else
+									{
+									System.out.println("\nSynatx error before String literal :"+match_tokens.get(i));
+									System.exit(0);
+									}
+								}
+								else if(firstChar==',')
+								{	
+									
+									isValid=true;
+								}
+								else
+								{	
+									List<String> printDirective_array = new ArrayList<String>();
+									
+									Boolean if_comma_inner=false;
+									if (isValid)
+									{
+										isValid=false;
+										for(j=i;j<match_tokens.size();j++)
+										{
+											if(match_tokens.get(j).charAt(0)==',')
+											{
+												if_comma_inner=true;
+												i--;
+												break;
+
+											}
+											printDirective_array.add(match_tokens.get(j));
+											i++;
+										}
+									}
+									else
+									{
+										System.out.println("\nSynatx error before String literal :"+match_tokens.get(i));
+										System.exit(0);
+									}
+									
+									if(if_comma_inner||j==match_tokens.size())
+									{
+										expEvaluation expDirective=new expEvaluation();
+										int results=expDirective.expProcess(printDirective_array);
+										System.out.print(results);
+									}
+									
+									if(j==match_tokens.size())
+									{
+										i=match_tokens.size();
+									}
+	
+								}
+								i++;
+								
+							}
+							
+							if(isValid)
+							{
+								System.out.println("\nextra comma at end");
+								System.exit(0);
+							}
+							
+							break;
+				case("PRINTLN"):
+								match_tokens.remove(0);
+								int i1=0;
+								int j1=0;
+								char firstChar1;
+								Boolean isValid1=true;
+								firstChar=match_tokens.get(0).charAt(0);
+								if(firstChar==',')
+								{
+									System.out.println("\nSyntax error : , can't be first character");
+									System.exit(0);
+								}
+								while(i1<match_tokens.size())
+								{
+									firstChar=match_tokens.get(i1).charAt(0);
+															
+									if(firstChar=='"')
+									{
+																			
+										if(isValid1)
+										{
+										String str=(match_tokens.get(i1)).substring(1,(match_tokens.get(i1)).length()-1);
+										System.out.print(str);
+										isValid1=false;
+										}
+										else
+										{
+										System.out.println("\nSynatx error before String literal :"+match_tokens.get(i1));
+										System.exit(0);
+										}
+									}
+									else if(firstChar==',')
+									{	
+										
+										isValid1=true;
+									}
+									else
+									{	
+										List<String> printDirective_array = new ArrayList<String>();
+										
+										Boolean if_comma_inner=false;
+										if (isValid1)
+										{
+											isValid1=false;
+											for(j1=i1;j1<match_tokens.size();j1++)
+											{
+												if(match_tokens.get(j1).charAt(0)==',')
+												{
+													if_comma_inner=true;
+													i1--;
+													break;
+				
+												}
+												printDirective_array.add(match_tokens.get(j1));
+												i1++;
+											}
+										}
+										else
+										{
+											System.out.println("\nSynatx error before String literal :"+match_tokens.get(i1));
+											System.exit(0);
+										}
+										
+										if(if_comma_inner||j1==match_tokens.size())
+										{
+											expEvaluation expDirective=new expEvaluation();
+											int results=expDirective.expProcess(printDirective_array);
+											System.out.print(results);
+										}
+										
+										if(j1==match_tokens.size())
+										{
+											i=match_tokens.size();
+										}
+				
+									}
+									i1++;
+									
+								}
+								
+								if(isValid1)
+								{
+									System.out.println("\nextra comma at end");
+									System.exit(0);
+								}
+								System.out.println("");
+								break;
+				case("INPUT"):	
+								String pattern_integer_input = "INPUT[\\s]+[aA-zZ][aA-zZ|0-9|_]*[\\s]*(,[\\s]*[aA-zZ][aA-zZ|0-9|_]*[\\s]*)*";
+								Pattern pattern_input_line_compile = Pattern.compile(pattern_integer_input);
+								Matcher match_pattern9 = pattern_input_line_compile.matcher(Input_line);
+								Boolean m9=match_pattern9.matches();
+								if(!m9)
+								{
+									System.out.println("Invalid input line:"+Input_line);
+									System.exit(0);
+								}
+								match_tokens.remove(0);
+								inputType input=new inputType();
+								input.inputProcess(match_tokens);
+								break;
+				case("END"):	System.out.println("Exiting program...");
+								System.exit(0);
+								break;
+				case("/"):		String comment=match_tokens.get(1);
+								if(comment.equals("/"))
+									break;
+								else
+									System.out.println("\nSyntax Error in comments");
+				default:String pattern_identifier = "[aA-zZ|(][aA-zZ|0-9|_]*" ;
+						Pattern pattern_identifier_compile = Pattern.compile(pattern_identifier);
+						Matcher match_pattern = pattern_identifier_compile.matcher(match_tokens.get(0));
+						Boolean m=match_pattern.matches();
+						if(m)
+						{
+							expEvaluation expDirective=new expEvaluation();
+							result=expDirective.expProcess(match_tokens);
+							System.out.println(result);
+						}
+						else
+						{
+						System.out.println("\nInvalid directive");
+						System.exit(0);
+						}	
+			 }
+			 Input_line = br.readLine();
+		 }
+	}
+
+}
